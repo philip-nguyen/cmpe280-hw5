@@ -7,93 +7,175 @@
 		<script>
 			// load in the Google Chart sankey diagram API
 			google.charts.load('current', {'packages':['sankey']});
-			//google.charts.setOnLoadCallback(generateSankey);
 
-			
-			
-
+			/*
+				upload function:
+				1. receives uploaded file and works on .csv fiels
+				2. parses file and returns a key-value array 
+				3. sends array of data to summate weights by country
+				4. sends summations to sankey diagram 
+			*/
 			function upload() {
 				
 				var file = document.getElementById("fileUpload").value;
-				
-				// var data = $.csv.toObjects(file);
+				var headers = [];
+				var data = [];
+
 				var regex = /^([a-zA-Z0-9\s_\\.\-:])+(.csv|.txt)$/;
-        if (regex.test(fileUpload.value.toLowerCase())) {
-            if (typeof (FileReader) != "undefined") {
-                var reader = new FileReader();
-                reader.onload = function (e) {
-                    var table = document.createElement("table");
-                    var rows = e.target.result.split("\n");
+        		if (regex.test(fileUpload.value.toLowerCase())) {
+            		if (typeof (FileReader) != "undefined") {
+                		var reader = new FileReader();
+                		reader.onload = function (e) {
+							
+							var rows = e.target.result.split("\n");
 
-										var headers = [];
-										var data = [];
-										
-
-                    for (var i = 0; i < rows.length; i++) {
-												if (i == 0) {
-													headers = rows[i].split(","); 
-													console.log(headers);
-												}
-                        var cells = rows[i].split(",");
-												
-                        if (cells.length > 1 && i > 0) {
-                            //var row = table.insertRow(-1);
-                            var row = {};
-														for (var j = 0; j < cells.length; j++) {
-                                //var cell = row.insertCell(-1);
-                                //cell.innerHTML = cells[j];
-																//row.push(cells(j));
-																//console.log("Headers:",headers[j]);
-																//console.log(cells[j]);
-																
-																row[headers[j]] = cells[j];
-                            }
-														//console.log(row["Value"]);
-														data.push(row);
-                        }
-                    }
-										console.log(data);
-                    var dvCSV = document.getElementById("wheat-trade-sankey");
-                    dvCSV.innerHTML = "";
-                    dvCSV.appendChild(table);
-                }
-                reader.readAsText(fileUpload.files[0]);
-            } else {
-                alert("This browser does not support HTML5.");
-            }
-        } else {
-            alert("Please upload a valid CSV file.");
-        }
+							for (var i = 0; i < rows.length; i++) {
+								if (i == 0) {
+									headers = rows[i].split(","); 
+									console.log(headers);
+								}
+								var cells = rows[i].split(",");
+													
+								if (cells.length > 1 && i > 0) {
+									
+									var row = {};
+									for (var j = 0; j < cells.length; j++) {
+										// row inserts a key-value pair
+										row[headers[j]] = cells[j];
+									}
+									
+									data.push(row);
+								}
+							}
+							// console.log(data);
+							// returns rows of data
+							// calculate totals of exports by recipient country
+							var exportTotals = calculateTotalValues(data);
+							
+							// generate with the totals calculated from the data
+							generateSankey(exportTotals);
+                		}
+                		reader.readAsText(fileUpload.files[0]);
+            		} 
+					else {
+                		alert("This browser does not support HTML5.");
+            		}
+        		} 
+				else {
+            		alert("Please upload a valid CSV file.");
+        		}
 			}
 
-			function generateSankey1() {
+			// calculates the sum of weight in all trades and returns JSON of the country-sumOfWeight pairs
+			function calculateTotalValues(data) {
+				var chinaMain = 0, taiwan = 0, japan = 0, mexico = 0, egypt = 0; nigeria = 0; philippines = 0,
+				sKorea = 0, iran = 0, unspecified = 0;
+
+				// console.log(data[0]['Partner Countries'] == "\"China mainland\""); 
+				// Returns TRUE
+				// console.log(data[0]['Partner Countries'].replace(/"/g, "") == "China mainland"); 
+				// Returns TRUE
+				
+				for(var i = 0; i < data.length; i++) {
+					// remove annoying quotes
+					var country = data[i]['Partner Countries'].replace(/"/g, "");
+					var amount = parseInt(data[i]['Value'].replace(/"/g, ""));
+
+					switch(country) {
+						case "China mainland":
+							chinaMain += amount;
+							break;
+						case "China Taiwan Province of":
+							// code
+							taiwan += amount;
+							break;
+						case "Egypt":
+							// code
+							egypt += amount;
+							break;
+						case "Iran (Islamic Republic of)":
+							// code
+							iran += amount;
+							break;
+						case "Japan":
+							// code
+							japan += amount;
+							break;
+						case "Mexico":
+							// code
+							mexico += amount;
+							break;
+						case "Nigeria":
+							// code
+							nigeria += amount;
+							break;
+						case "Philippines":
+							// code
+							philippines += amount;
+							break;
+						case "Republic of Korea":
+							// code
+							sKorea += amount;
+							break;
+						case "Unspecified Area":
+							// code
+							unspecified += amount;
+							break;
+					}
+				}
+
+				// return JSON of the summations
+				return {
+					china: chinaMain,
+					taiwan: taiwan,
+					egypt: egypt,
+					iran: iran,
+					japan: japan,
+					mexico: mexico,
+					nigeria: nigeria,
+					philippines: philippines,
+					korea: sKorea,
+					unspecified: unspecified 
+				}
+				
+			}
+
+			function generateSankey(totals) {
 				var data = new google.visualization.DataTable();
+				var from = "United States"
 				data.addColumn('string', 'From');
 				data.addColumn('string', 'To');
-				data.addColumn('number', 'Weight');
+				data.addColumn('number', 'Weight(tonnes)');
 				data.addRows([
-				[ 'A', 'X', 5 ],
-				[ 'A', 'Y', 7 ],
-				[ 'A', 'Z', 6 ],
-				[ 'B', 'X', 2 ],
-				[ 'B', 'Y', 9 ],
-				[ 'B', 'Z', 4 ]
+				[ from, 'China, mainland', totals.china ],
+				[ from, 'China, Taiwan Province of', totals.taiwan ],
+				[ from, 'Egypt', totals.egypt ],
+				[ from, 'Iran (Islamic Republic of)', totals.iran ],
+				[ from, 'Japan', totals.japan ],
+				[ from, 'Mexico', totals.mexico ],
+				[ from, 'Nigeria', totals.nigeria ],
+				[ from, 'Philippines', totals.philippines ],
+				[ from, 'Unspecified Area', totals.unspecified ],
 				]);
 
 				// Sets chart options.
 				var options = {
 				width: 600,
+				height: 800,
 				};
 
 				// Instantiates and draws our chart, passing in some options.
+				document.getElementById("title").innerHTML = "U.S. exports of Wheat in Tonnes";
 				var chart = new google.visualization.Sankey(document.getElementById('wheat-trade-sankey'));
 				chart.draw(data, options);
 			}
 		</script>
 	</head>
 	<body>
+		<p>Please input your csv file:</p>
 		<input type="file" id="fileUpload" />
-		<input type="button" id="upload" value="Upload" onclick="upload()" />
+		<input type="button" id="upload" value="Upload" onclick="upload()" /><br>
+		<h2 id="title"></h2>
 		<div id="wheat-trade-sankey" style="width:900px; height:400px;" ></div>
 	</body>
 </html>
